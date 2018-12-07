@@ -1,69 +1,82 @@
 pragma solidity ^0.4.23;
 
-contract TNSTag{
+library TNSTag{
     struct GenAddress{
-        address[] genAddressList,
-        uint numElements,
-        bool generateAddress
+        bytes32[] genAddressList;
+        uint numElements;
+        bool generateAddress;
     }
     struct TagMetaData{
-        address pubAddress
+        bytes32 pubAddress;
         /* TODO:
         bool isSecret, 
-        address[] secretApprovedMembers*/
+        bytes32[] secretApprovedMembers*/
     }
-    GenAddress public genAddressStruct;
-    TagMetaData public tagMetaDataStruct;
+    
+    struct TNSTagData{
+        GenAddress genAddressStruct;
+        TagMetaData tagMetaDataStruct;
+        bool isExist;
+    }
+    
 
-    function setPubAddress(address pubAddress) external{
-        tagMetaDataStruct.pubAddress = pubAddress;
+    function setExist(TNSTagData storage data, bool isExist) public{
+        data.isExist = isExist;
+    }
+
+    function getExist(TNSTagData storage data) public view returns(bool){
+        return data.isExist;
+    }
+
+    function setPubAddress(TNSTagData storage data, bytes32 pubAddress) public{
+        data.tagMetaDataStruct.pubAddress = pubAddress;
     } 
 
-    function getPubAddress(address pubAddress) external view returns(address){
-        return tagMetaDataStruct.pubAddress;
+    function getPubAddress(TNSTagData storage data) public view returns(bytes32){
+        return data.tagMetaDataStruct.pubAddress;
     }
 
-    function setGenAddressFlag(bool genFlag) external{
-        genAddressStruct.generateAddress = genFlag;
+    function setGenAddressFlag(TNSTagData storage data, bool genFlag) public{
+        data.genAddressStruct.generateAddress = genFlag;
     }
 
-    function getGenAddressFlag(bool genFlag) external view returns(bool){
-        return genAddressStruct.generateAddress;
+    function getGenAddressFlag(TNSTagData storage data) public view returns(bool){
+        return data.genAddressStruct.generateAddress;
     }
 
 
-    function appendGenAddressList(address genAddress) external{
-        genAddressStruct.genAddressList[genAddressStruct.numElements++].push(genAddress);
+    function appendGenAddressList(TNSTagData storage data, bytes32 genAddress) public{
+        data.genAddressStruct.numElements++;
+        data.genAddressStruct.genAddressList.push(genAddress);
     }
 
     //set list is always called before append
-    function setGenAddressList(address[] genAddressList) external{
-        genAddressStruct.generateAddress = true;
-        genAddressStruct.genAddressList = genAddressList; 
-        genAddressStruct.numElements = genAddressList.length;
+    function setGenAddressList(TNSTagData storage data, bytes32[] genAddressList) public{
+        data.genAddressStruct.generateAddress = true;
+        data.genAddressStruct.genAddressList = genAddressList; 
+        data.genAddressStruct.numElements = genAddressList.length;
     }
 
     /*genAddressFlag will still be set if addressList becomes empty. In that case, it won't default to 
     pubAddress if it's set*/
-    function deleteFromGenAddressList(uint idxToRemove) external{
-        require(idxToRemove >= 0 && idxToRemove < genAddressStruct.numElements,
-            "Index ix out of bounds");
-        require(genAddressStruct.numElements > 0, "Array is empty, nothing to delete");
+    function deleteFromGenAddressList(TNSTagData storage data, uint idxToRemove) public{
+        require(idxToRemove >= 0 && idxToRemove < data.genAddressStruct.numElements,"Index ix out of bounds");
+        require(data.genAddressStruct.numElements > 0, "Array is empty, nothing to delete");
 
-        if (genAddressStruct.numElements > 1){
-            genAddressStruct.genAddressList[idxToRemove] = genAddressStruct.genAddressList[--genAddressStruct.numElements];
-            delete genAddressStruct.genAddressList[genAddressStruct.numElements];
+        if (data.genAddressStruct.numElements > 1){
+            data.genAddressStruct.genAddressList[idxToRemove] = data.genAddressStruct.genAddressList[--data.genAddressStruct.numElements];
+            delete data.genAddressStruct.genAddressList[data.genAddressStruct.numElements];
         }else{
-            delete genAddressStruct.genAddressList[idxToRemove];
+            delete data.genAddressStruct.genAddressList[idxToRemove];
         }
     }
  
-    function getGenAddressList() external view returns(address[]){
-        return genAddressStruct.genAddressList;
+    function getGenAddressList(TNSTagData storage data) public view returns(bytes32[]){
+        return data.genAddressStruct.genAddressList;
     }
 
     //random number generation off-chain
-    function useNextGenAddress(listIdx) external view returns(address){
-        return genAddressStruct.genAddressList[listIdx];
+    function useNextGenAddress(TNSTagData storage data, uint listIdx) public view returns(bytes32){
+        return data.genAddressStruct.genAddressList[listIdx];
     }
 }
