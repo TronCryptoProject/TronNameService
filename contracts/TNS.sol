@@ -35,7 +35,8 @@ contract TNS{
         require(alias[0] != 0, "Alias is empty");
         _;
     }
-
+    event StateUpdated(address indexed _from);
+    event StateAliasUpdated(address indexed _from, bytes32 _alias); //fetch update for specific alias
 
     constructor() public{
         tnsOwnerReverse = new TNSOwnerReverse();
@@ -74,10 +75,10 @@ contract TNS{
     }
 
     //tagName would be address of "default" or actual tag name
-    function setAlias(bytes32 aliasName, bytes32 encryptedAlias, bytes32 tagName,
-        bytes32 encryptedTag, bytes32 pubAddress) public aliasEmpty(aliasName) tagEmpty(tagName){
+    function setAliasStatic(bytes32 aliasName, bytes32 encryptedAlias, bytes32 tagName,
+        bytes32 encryptedTag, address pubAddress) public aliasEmpty(aliasName) tagEmpty(tagName){
 
-        require(pubAddress[0] != 0, "pubAddress is empty");
+        require(pubAddress != 0x0, "pubAddress is empty");
         
         TNSTag.TNSTagData memory tns_tag;
         tns_tag.isExist = true;
@@ -88,16 +89,17 @@ contract TNS{
             addNewAlias(aliasName, encryptedAlias, tagName, encryptedTag, tns_tag);
         }else if (aliasMapping[aliasName].aliasOwner == msg.sender){
             //alias exists but we are trying to add a tag
-            require(isTagAvailable(aliasName, tagName), "Tag is already exists");
+            require(isTagAvailable(aliasName, tagName), "Tag already exists");
             addNewTag(aliasName, tagName, encryptedTag, tns_tag);
         }else{
             revert("Alias is already taken");
         }
+        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     /*If generating new address you wont have default public address for a tag*/
-    function setAlias(bytes32 aliasName, bytes32 encryptedAlias, bytes32 tagName,
-        bytes32 encryptedTag, bytes32[] genAddressList) public aliasEmpty(aliasName) tagEmpty(tagName){
+    function setAliasGenerated(bytes32 aliasName, bytes32 encryptedAlias, bytes32 tagName,
+        bytes32 encryptedTag, address[] genAddressList) public aliasEmpty(aliasName) tagEmpty(tagName){
 
         require(genAddressList.length > 0, "genAddressList is empty");
 
@@ -110,12 +112,12 @@ contract TNS{
         if (isAliasAvailable(aliasName)){
             addNewAlias(aliasName, encryptedAlias, tagName, encryptedTag, tns_tag);
         }else if (aliasMapping[aliasName].aliasOwner == msg.sender){
-            require(isTagAvailable(aliasName, tagName), "Tag is already exists");
+            require(isTagAvailable(aliasName, tagName), "Tag already exists");
             addNewTag(aliasName, tagName, encryptedTag, tns_tag);
         }else{
             revert("Alias is already taken");
         }
-       
+       emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     //Entire alias & its corresponding tags cannot be deleted but can only be updated
@@ -131,6 +133,7 @@ contract TNS{
         delete keccak_tags_list[keccak_tags_list.length];
 
         aliasMapping[aliasName].tagMapping[keccak_tags_list[idx_to_remove]].keccakTagIdx = idx_to_remove;
+        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     function updateAlias(bytes32 aliasName, bytes32 oldEncryptedAlias, bytes32 newAliasName,
@@ -139,47 +142,87 @@ contract TNS{
         require(newAliasName[0] != 0, "New Alias is empty");
         require(isAliasAvailable(newAliasName), "Alias is already taken");
         aliasMapping[newAliasName] = aliasMapping[aliasName];
-        delete aliasKeccackToEncryptedMap[oldEncryptedAlias];
+        delete aliasKeccackToEncryptedMap[aliasName];
         aliasKeccackToEncryptedMap[newAliasName] = newEncryptedAlias;
         delete aliasMapping[aliasName];
         tnsOwnerReverse.updateAlias(msg.sender, aliasName, newAliasName);
+
+        emit StateUpdated(msg.sender);
+    }
+
+    function updateTag(bytes32 aliasName, bytes32 tagName, bytes32 oldEncryptedTag,
+        bytes32 newTagName, bytes32 newEncryptedTag) public isOwner(aliasName) aliasEmpty(aliasName) tagEmpty(tagName){
+
+        require(newTagName[0] != 0, "New tag is empty");
+        require(isTagAvailable(aliasName, newTagName), "Tag already exists");
+        aliasMapping[aliasName].tagMapping[newTagName] = aliasMapping[aliasName].tagMapping[tagName];
+
+        uint keccak_idx = aliasMapping[aliasName].tagMapping[tagName].keccakTagIdx;
+        aliasMapping[aliasName].keccakTagsList[keccak_idx] = newTagName;
+
+        aliasMapping[aliasName].tagKeccackToEncryptedMap[newTagName] = newEncryptedTag;
+        delete aliasMapping[aliasName].tagKeccackToEncryptedMap[tagName];
+        delete aliasMapping[aliasName].tagMapping[tagName];
+
+        emit StateUpdated(msg.sender);
     }
 
     function updatePubAddressForTag(bytes32 aliasName, bytes32 tagName,
-        bytes32 newPubAddress) public isOwner(aliasName) aliasEmpty(aliasName) tagEmpty(tagName){
-        require(newPubAddress[0] != 0, "newPubAddress is not set");
+        address newPubAddress) public isOwner(aliasName) aliasEmpty(aliasName) tagEmpty(tagName){
+        require(newPubAddress != 0x0, "newPubAddress is not set");
+        if (newPubAddress == 0x0){
+            if (aliasMapping[aliasName].tagMapping[tagName].tagData.getGenAddressFlag() == false){
+                revert("In order to unset public address, auto-generated addresses must be on and have rotating addresses. Only one option can be on at any given time.");
+            }
+        }
         aliasMapping[aliasName].tagMapping[tagName].tagData.setPubAddress(newPubAddress);
+        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     function updateGenAddressFlag(bytes32 aliasName, bytes32 tagName, bool genFlag) public isOwner(aliasName)
         aliasEmpty(aliasName) tagEmpty(tagName){
         aliasMapping[aliasName].tagMapping[tagName].tagData.setGenAddressFlag(genFlag);
+        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     function updateGenAddressListReplace(bytes32 aliasName, bytes32 tagName,
-        bytes32[] addressList) public isOwner(aliasName) aliasEmpty(aliasName) tagEmpty(tagName){
+        address[] addressList) public isOwner(aliasName) aliasEmpty(aliasName) tagEmpty(tagName){
         aliasMapping[aliasName].tagMapping[tagName].tagData.setGenAddressList(addressList);
+        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     function updateGenAddressListAppend(bytes32 aliasName, bytes32 tagName,
-        bytes32 newAddress) public isOwner(aliasName) aliasEmpty(aliasName) tagEmpty(tagName){
+        address newAddress) public isOwner(aliasName) aliasEmpty(aliasName) tagEmpty(tagName){
+
+        uint num_elems = aliasMapping[aliasName].tagMapping[tagName].tagData.getGenAddressListLen();
+        require(num_elems < 20, "You can only store up to 20 addresses in order to obey gas limit");
         aliasMapping[aliasName].tagMapping[tagName].tagData.appendGenAddressList(newAddress);
+        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     function updateGenAddressListDelete(bytes32 aliasName, bytes32 tagName, uint idxToRemove) public
         isOwner(aliasName) aliasEmpty(aliasName) tagEmpty(tagName){
         aliasMapping[aliasName].tagMapping[tagName].tagData.deleteFromGenAddressList(idxToRemove);
+        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
-    function getGenAddressList(bytes32 aliasName, bytes32 tagName) public view returns(bytes32[]){
+
+    //GETTERS
+
+    //Only the owner can get the address list
+    function getGenAddressList(bytes32 aliasName, bytes32 tagName) public view isOwner(aliasName) returns(address[]){
         return aliasMapping[aliasName].tagMapping[tagName].tagData.getGenAddressList();
     }
 
-    function getPubAddressForTag(bytes32 aliasName, bytes32 tagName) public view returns(bytes32){
+    function getGenAddressListLen(bytes32 aliasName, bytes32 tagName) public view returns(uint){
+        return aliasMapping[aliasName].tagMapping[tagName].tagData.getGenAddressListLen();
+    }
+
+    function getPubAddressForTag(bytes32 aliasName, bytes32 tagName) public view returns(address){
         return aliasMapping[aliasName].tagMapping[tagName].tagData.getPubAddress();
     }
 
-    function getGenAddressForTag(bytes32 aliasName, bytes32 tagName, uint idx) public view returns(bytes32){
+    function getGenAddressForTag(bytes32 aliasName, bytes32 tagName, uint idx) public view returns(address){
         return aliasMapping[aliasName].tagMapping[tagName].tagData.useNextGenAddress(idx);
     }
 
@@ -202,15 +245,23 @@ contract TNS{
     function getAllTagsForAlias(bytes32 aliasName) public view returns(bytes32[]){
         return aliasMapping[aliasName].keccakTagsList;
     }
-    function getAliasesForOwner() public view returns(bytes32[]){
-        return tnsOwnerReverse.getAllAliasesForOwner(msg.sender);
+    function getAliasesForOwner(address ownerAddress) public view returns(bytes32[]){
+        return tnsOwnerReverse.getAllAliasesForOwner(ownerAddress);
     }
     function getEncryptedAliasForKeccak(bytes32 aliasName) public view returns(bytes32){
         return aliasKeccackToEncryptedMap[aliasName];
     }
-    function getTagDataForTag(bytes32 aliasName, bytes32 tagName) public view returns(bool,bytes32[],bytes32){
-        bytes32[] memory gen_list = getGenAddressList(aliasName, tagName);
-        bytes32 pub_address = getPubAddressForTag(aliasName, tagName);
+    function getEncryptedTagForKeccak(bytes32 aliasName, bytes32 tagName) public view returns(bytes32){
+        return aliasMapping[aliasName].tagKeccackToEncryptedMap[tagName];
+    }
+
+    function getAliasOwner(bytes32 aliasName) public view returns(address){
+        return aliasMapping[aliasName].aliasOwner;
+    }
+
+    function getTagDataForTag(bytes32 aliasName, bytes32 tagName) public view returns(bool,address[],address){
+        address[] memory gen_list = getGenAddressList(aliasName, tagName);
+        address pub_address = getPubAddressForTag(aliasName, tagName);
         bool gen_flag = getGenAddressFlag(aliasName, tagName);
         return (gen_flag, gen_list, pub_address);
     }
