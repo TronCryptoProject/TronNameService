@@ -3,7 +3,6 @@ pragma solidity ^0.4.23;
 library TNSTag{
   struct GenAddress{
 	address[] genAddressList;
-	uint numElements;
 	bool generateAddress;
   }
   struct TagMetaData{
@@ -16,17 +15,8 @@ library TNSTag{
   struct TNSTagData{
 	GenAddress genAddressStruct;
 	TagMetaData tagMetaDataStruct;
-	bool isExist;
   }
   
-  
-  function setExist(TNSTagData storage data, bool isExist) public{
-		data.isExist = isExist;
-  }
-  
-  function getExist(TNSTagData storage data) public view returns(bool){
-		return data.isExist;
-  }
   
   function setPubAddress(TNSTagData storage data, address pubAddress) public{
 		data.tagMetaDataStruct.pubAddress = pubAddress;
@@ -38,7 +28,7 @@ library TNSTag{
   
   function setGenAddressFlag(TNSTagData storage data, bool genFlag) public{
 	  	if(genFlag){
-			if (data.genAddressStruct.numElements == 0){
+			if (data.genAddressStruct.genAddressList.length == 0){
 				revert("You cannot set auto-generate addresses since there are not addreses to be found. Please set some addresses first.");
 			}
 		}else{
@@ -55,7 +45,6 @@ library TNSTag{
   
   
   function appendGenAddressList(TNSTagData storage data, address genAddress) public{
-		data.genAddressStruct.numElements++;
 		data.genAddressStruct.genAddressList.push(genAddress);
 		if (data.genAddressStruct.generateAddress == false){
 			data.genAddressStruct.generateAddress = true;
@@ -64,7 +53,7 @@ library TNSTag{
   
   function setGenAddressList(TNSTagData storage data, address[] genAddressList) public{
 		data.genAddressStruct.genAddressList = genAddressList;
-		data.genAddressStruct.numElements = genAddressList.length;
+		data.genAddressStruct.genAddressList.length = genAddressList.length;
 		if (genAddressList.length == 0){
 			data.genAddressStruct.generateAddress = false;
 		}else{
@@ -72,20 +61,20 @@ library TNSTag{
 		}
   }
   
-  /*genAddressFlag will still be set if addressList becomes empty. In that case, it won't default to
-  pubAddress if it's set*/
   function deleteFromGenAddressList(TNSTagData storage data, uint idxToRemove) public{
-		require(idxToRemove >= 0 && idxToRemove < data.genAddressStruct.numElements,"Index ix out of bounds");
-		require(data.genAddressStruct.numElements > 0, "Array is empty, nothing to delete");
+	    uint curr_len = data.genAddressStruct.genAddressList.length;
+
+		require(idxToRemove >= 0 && idxToRemove < curr_len,"Index ix out of bounds");
+		require(curr_len > 0, "Array is empty, nothing to delete");
 		
-		if (data.genAddressStruct.numElements > 1){
-			data.genAddressStruct.genAddressList[idxToRemove] = data.genAddressStruct.genAddressList[--data.genAddressStruct.numElements];
-			delete data.genAddressStruct.genAddressList[data.genAddressStruct.numElements];
+		if (curr_len > 1){
+			data.genAddressStruct.genAddressList[idxToRemove] = data.genAddressStruct.genAddressList[curr_len - 1];
+			data.genAddressStruct.genAddressList.length--;
 		}else{
 			if (data.tagMetaDataStruct.pubAddress == 0x0){
-				revert("You are deleting the last auto-generated address, however, static address is not set. Please set static address before deleting this last address, so your alias/tag will automatically resolve to it!");
+				revert("You are deleting the last auto-generated address, however, static address is not set. Please set static address before deleting this last auto-gen address, so your alias/tag will automatically resolve to it. Only either static address or auto-gen option can be on at any given time.");
 			}
-			delete data.genAddressStruct.genAddressList[idxToRemove];
+			data.genAddressStruct.genAddressList.length--;
 			data.genAddressStruct.generateAddress = false;
 		}
   }
@@ -95,7 +84,7 @@ library TNSTag{
   }
   
   function getGenAddressListLen(TNSTagData storage data) public view returns(uint){
-		return data.genAddressStruct.numElements;
+		return data.genAddressStruct.genAddressList.length;
   }
 
   //random number generation off-chain
