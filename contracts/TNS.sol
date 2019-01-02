@@ -270,6 +270,32 @@ contract TNS{
         emit StateAliasUpdated(msg.sender, aliasName);
     }
 
+    function updateTagIsSecret(bytes32 aliasName, bytes32 tagName, bool isSecret)  aliasEmpty(aliasName) tagEmpty(tagName)
+        aliasTagExist(aliasName, tagName) isOwner(aliasName) public{
+        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+        storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.setIsSecret(isSecret);
+    }
+
+    function updateTagSecretUserList(bytes32 aliasName, bytes32 tagName, bytes32[] keccakUsers,
+        bytes32[] encUsers)  aliasEmpty(aliasName) tagEmpty(tagName) aliasTagExist(aliasName, tagName) isOwner(aliasName) public{
+
+        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+        storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.setSecretUserList(keccakUsers,encUsers);
+    }
+
+    function updateTagSecretUserListAppend(bytes32 aliasName, bytes32 tagName, bytes32 keccakUser,
+        bytes32[] encUser)  aliasEmpty(aliasName) tagEmpty(tagName) aliasTagExist(aliasName, tagName) isOwner(aliasName) public{
+
+        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+        storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.appendSecretUser(keccakUser,encUser);
+    }
+
+    function updateTagSecretUserDelete(bytes32 aliasName, bytes32 tagName, bytes32 keccakUser,
+        uint idxToRemove)  aliasEmpty(aliasName) tagEmpty(tagName) aliasTagExist(aliasName, tagName) isOwner(aliasName) public{
+
+        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+        storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.deleteSecretUser(keccakUser,idxToRemove);
+    }
 
     //GETTERS
 
@@ -336,10 +362,32 @@ contract TNS{
         return aliasList[aliasIdxMap[aliasName]].aliasOwner;
     }
 
-    function getTagDataForTag(bytes32 aliasName, bytes32 tagName) public view returns(bool,address[],address){
+    function getTagDataForTag(bytes32 aliasName, bytes32 tagName) public view
+        returns(bool,bool,address[],bytes32[],address){
+
         address[] memory gen_list = getGenAddressList(aliasName, tagName);
+        bytes32[] memory enc_secret_users = getSecretUserList(aliasName, tagName);
         address pub_address = getPubAddressForTag(aliasName, tagName);
         bool gen_flag = getGenAddressFlag(aliasName, tagName);
-        return (gen_flag, gen_list, pub_address);
+        bool is_tag_secret = getIsTagSecret(aliasName, tagName);
+        return (gen_flag, is_tag_secret, gen_list, enc_secret_users, pub_address);
     }
+
+    function isSecretUser(bytes32 aliasName, bytes32 tagName, bytes32 keccakUser) aliasTagExist(aliasName,tagName) public view returns(bool){
+        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.secretUserExists(keccakUser);
+    }
+
+    function getSecretUserList(bytes32 aliasName, bytes32 tagName) aliasTagExist(aliasName,tagName)
+        public view returns(bytes32[]){ 
+        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getSecretUserList();
+    }
+
+    function getIsTagSecret(bytes32 aliasName, bytes32 tagName) aliasTagExist(aliasName,tagName)
+        public view returns(bool){
+        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getIsSecret();
+    }
+
 }
