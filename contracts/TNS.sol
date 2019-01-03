@@ -51,11 +51,11 @@ contract TNS{
         _;
     }
     modifier aliasEmpty(bytes32 alias){
-        require(alias[0] != 0, "Alias is empty");
+        require(alias != bytes32(0), "Alias is empty");
         _;
     }
-    modifier tagEmpty(bytes32 alias){
-        require(alias[0] != 0, "Alias is empty");
+    modifier tagEmpty(bytes32 tag){
+        require(tag != bytes32(0), "Tag is empty");
         _;
     }
     event StateUpdated(address indexed _from);
@@ -177,7 +177,7 @@ contract TNS{
     function updateAlias(bytes32 aliasName, bytes32 oldEncryptedAlias, bytes32 newAliasName,
         bytes32 newEncryptedAlias) public aliasEmpty(aliasName) isOwner(aliasName){
 
-        require(newAliasName[0] != 0, "New Alias is empty");
+        require(newAliasName != bytes32(0), "New Alias is empty");
         require(isAliasAvailable(newAliasName), "Alias is already taken");
 
         delete aliasExistMap[aliasName];
@@ -197,7 +197,7 @@ contract TNS{
         bytes32 newTagName, bytes32 newEncryptedTag) public aliasEmpty(aliasName) tagEmpty(tagName) 
             aliasTagExist(aliasName, tagName) isOwner(aliasName){
 
-        require(newTagName[0] != 0, "New tag is empty");
+        require(newTagName != bytes32(0), "New tag is empty");
         require(isTagAvailable(aliasName, newTagName), "Tag already exists");
 
         TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
