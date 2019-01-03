@@ -297,36 +297,67 @@ contract TNS{
         storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.deleteSecretUser(keccakUser,idxToRemove);
     }
 
+    //work around instead of using modifiers since there's a bug in tronWeb that disallows require calls in view functions
+    function doesAliasTagExist(bytes32 aliasName, bytes32 tagName) private view returns(bool){
+        return isAliasAvailable(aliasName) == false && isTagAvailable(aliasName,tagName) == false;
+    }
+
+    function doesAliasExist(bytes32 aliasName) private view returns(bool){
+        return isAliasAvailable(aliasName) == false;
+    }
+
     //GETTERS
 
-    function getGenAddressList(bytes32 aliasName, bytes32 tagName) aliasTagExist(aliasName,tagName)
+    function getGenAddressList(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
         public view returns(address[]){
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getGenAddressList();
+
+        if (doesAliasTagExist(aliasName,tagName)){
+             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getGenAddressList();
+        }else{
+            address[] memory empty_array = new address[](0);
+            return empty_array;
+        }
     }
 
-    function getGenAddressListLen(bytes32 aliasName, bytes32 tagName) aliasTagExist(aliasName,tagName)
+    function getGenAddressListLen(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
         public view returns(uint){
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getGenAddressListLen();
+        if (doesAliasTagExist(aliasName,tagName)){
+            TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getGenAddressListLen();
+        }else{
+            return 0;
+        }
     }
 
-    function getPubAddressForTag(bytes32 aliasName, bytes32 tagName) aliasTagExist(aliasName,tagName)
+    function getPubAddressForTag(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
         public view returns(address){
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getPubAddress();
+        if (doesAliasTagExist(aliasName,tagName)){
+            TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getPubAddress();
+        }else{
+            return address(0);
+        }
     }
 
-    function getGenAddressForTag(bytes32 aliasName, bytes32 tagName, uint idx) aliasTagExist(aliasName,tagName)
+    function getGenAddressForTag(bytes32 aliasName, bytes32 tagName, uint idx) //aliasTagExist(aliasName,tagName)
         public view returns(address){
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.useNextGenAddress(idx);
+        if (doesAliasTagExist(aliasName,tagName)){
+            TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.useNextGenAddress(idx);
+        }else{
+            return address(0);
+        }
     }
 
-    function getGenAddressFlag(bytes32 aliasName, bytes32 tagName) aliasTagExist(aliasName,tagName)
+    function getGenAddressFlag(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
         public view returns(bool){
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getGenAddressFlag();
+        if (doesAliasTagExist(aliasName,tagName)){
+            TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getGenAddressFlag();
+        }else {
+            return false;
+        }
     }
 
     function isAliasAvailable(bytes32 aliasName) public view returns(bool){
@@ -343,23 +374,40 @@ contract TNS{
         }
         return true;
     }
-    function getAllTagsForAlias(bytes32 aliasName) aliasExist(aliasName) public view returns(bytes32[]){
-        return aliasList[aliasIdxMap[aliasName]].tagData.keccakTagsList;
+    function getAllTagsForAlias(bytes32 aliasName) /*aliasExist(aliasName)*/ public view returns(bytes32[]){
+        if (doesAliasExist(aliasName)){
+            return aliasList[aliasIdxMap[aliasName]].tagData.keccakTagsList;
+        }else{
+            bytes32[] memory empty_array = new bytes32[](0);
+            return empty_array;
+        }
     }
     function getAliasesForOwner(address ownerAddress) public view returns(bytes32[]){
         return tnsOwnerReverse.getAllAliasesForOwner(ownerAddress);
     }
-    function getEncryptedAliasForKeccak(bytes32 aliasName) aliasExist(aliasName) public view returns(bytes32){
-        return aliasList[aliasIdxMap[aliasName]].encryptedAlias;
+    function getEncryptedAliasForKeccak(bytes32 aliasName) /*aliasExist(aliasName)*/ public view returns(bytes32){
+        if (doesAliasExist(aliasName)){
+            return aliasList[aliasIdxMap[aliasName]].encryptedAlias;
+        }else{
+            return 0x0;
+        }
     }
-    function getEncryptedTagForKeccak(bytes32 aliasName, bytes32 tagName) aliasTagExist(aliasName, tagName)
+    function getEncryptedTagForKeccak(bytes32 aliasName, bytes32 tagName) /*aliasTagExist(aliasName, tagName)*/
         public view returns(bytes32){
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].encryptedTag;
+        if (doesAliasTagExist(aliasName,tagName)){
+            TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].encryptedTag;
+        }else{
+            return 0x0;
+        }
     }
 
-    function getAliasOwner(bytes32 aliasName) aliasExist(aliasName) public view returns(address){
-        return aliasList[aliasIdxMap[aliasName]].aliasOwner;
+    function getAliasOwner(bytes32 aliasName) /*aliasExist(aliasName)*/ public view returns(address){
+        if (doesAliasExist(aliasName)){
+            return aliasList[aliasIdxMap[aliasName]].aliasOwner;
+        }else{
+            return address(0);
+        }
     }
 
     function getTagDataForTag(bytes32 aliasName, bytes32 tagName) public view
@@ -373,21 +421,34 @@ contract TNS{
         return (gen_flag, is_tag_secret, gen_list, enc_secret_users, pub_address);
     }
 
-    function isSecretUser(bytes32 aliasName, bytes32 tagName, bytes32 keccakUser) aliasTagExist(aliasName,tagName) public view returns(bool){
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.secretUserExists(keccakUser);
+    function isSecretUser(bytes32 aliasName, bytes32 tagName, bytes32 keccakUser) /*aliasTagExist(aliasName,tagName)*/ public view returns(bool){
+        if (doesAliasTagExist(aliasName,tagName)){
+            TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.secretUserExists(keccakUser);
+        }else{
+            return false;
+        }
     }
 
-    function getSecretUserList(bytes32 aliasName, bytes32 tagName) aliasTagExist(aliasName,tagName)
+    function getSecretUserList(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
         public view returns(bytes32[]){ 
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getSecretUserList();
+        if (doesAliasTagExist(aliasName,tagName)){
+            TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getSecretUserList();
+        }else{
+            bytes32[] memory empty_array = new bytes32[](0);
+            return empty_array;
+        }
     }
 
-    function getIsTagSecret(bytes32 aliasName, bytes32 tagName) aliasTagExist(aliasName,tagName)
+    function getIsTagSecret(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
         public view returns(bool){
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getIsSecret();
+        if (doesAliasTagExist(aliasName,tagName)){
+            TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getIsSecret();
+        }else{
+            return false;
+        }
     }
 
 }
