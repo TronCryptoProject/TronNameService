@@ -47,10 +47,12 @@ library TNSTag{
 
 
     function appendGenAddressList(TNSTagData storage data, address genAddress) public{
+        require(data.genAddressStruct.genAddressList.length < 20, "Cannot add more than 20 auto-gen addresses");
         data.genAddressStruct.genAddressList.push(genAddress);
     }
 
     function setGenAddressList(TNSTagData storage data, address[] genAddressList) public{
+        require(genAddressList.length <= 20, "Cannot add more than 20 auto-gen addresses");
         data.genAddressStruct.genAddressList = genAddressList;
         data.genAddressStruct.genAddressList.length = genAddressList.length;
         if (genAddressList.length == 0){
