@@ -22,8 +22,9 @@ module.exports = {
     },
     mainnet: {
       privateKey: process.env.PK,
-      consume_user_resource_percent: 30,
+      userFeePercentage: 30,
       fee_limit: 1000000000,
+      originEnergyLimit: 1e7,
       fullNode: "https://api.trongrid.io",
       solidityNode: "https://api.trongrid.io",
       eventServer: "https://api.trongrid.io",
