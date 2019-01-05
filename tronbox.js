@@ -1,8 +1,8 @@
 module.exports = {
   networks: {
     dev: {
-      privateKey: '3d976ac3d0808beff1fe645c1488ef87266830aee8bad2a7c86654dd430d97cb',
-      userFeePercentage: 30,
+      privateKey: 'eab993c043dd38594804a9e060188e6e4391117198f1cdebb66bea6fbd5ad2d2',
+      userFeePercentage: 100,
       feeLimit: 1000000000,
       originEnergyLimit: 1e5,
       callValue: 0,
@@ -22,8 +22,8 @@ module.exports = {
     },
     mainnet: {
       privateKey: process.env.PK,
-      userFeePercentage: 30,
-      fee_limit: 1000000000,
+      userFeePercentage: 100,
+      feeFimit: 1e9,
       originEnergyLimit: 1e7,
       fullNode: "https://api.trongrid.io",
       solidityNode: "https://api.trongrid.io",
