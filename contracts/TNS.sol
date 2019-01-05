@@ -29,8 +29,6 @@ contract TNS{
 
     TNSOwnerReverse tnsOwnerReverse;
 
-    bytes32 defaultAddress = 0xcfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728;
-    
     //modifiers
     modifier isOwner(bytes32 aliasName){
         require(aliasExistMap[aliasName] == true, "Alias doesn't exist");
@@ -58,9 +56,6 @@ contract TNS{
         require(tag != bytes32(0), "Tag is empty");
         _;
     }
-    event StateUpdated(address indexed _from);
-    event StateAliasUpdated(address indexed _from, bytes32 _alias); //fetch update for specific alias
-
     constructor() public{
         tnsOwnerReverse = new TNSOwnerReverse();
     }
@@ -127,7 +122,6 @@ contract TNS{
         }else{
             revert("Alias is already taken");
         }
-        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     /*If generating new address you wont have default public address for a tag*/
@@ -148,7 +142,6 @@ contract TNS{
         }else{
             revert("Alias is already taken");
         }
-       emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     //Entire alias & its corresponding tags cannot be deleted but can only be updated
@@ -170,8 +163,6 @@ contract TNS{
         storage_tag_data.tagList.length--;
 
         delete storage_tag_data.tagIdxMap[tagName];
-
-        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     function updateAlias(bytes32 aliasName, bytes32 oldEncryptedAlias, bytes32 newAliasName,
@@ -189,8 +180,6 @@ contract TNS{
         aliasList[alias_idx].encryptedAlias = newEncryptedAlias;
 
         tnsOwnerReverse.updateAlias(msg.sender, aliasName, newAliasName);
-
-        emit StateUpdated(msg.sender);
     }
 
     function updateTag(bytes32 aliasName, bytes32 tagName, bytes32 oldEncryptedTag,
@@ -210,8 +199,6 @@ contract TNS{
         storage_tag_data.keccakTagsList[tag_idx] = newTagName;
         storage_tag_data.tagIdxMap[newTagName] = tag_idx;
         delete storage_tag_data.tagIdxMap[tagName];
-
-        emit StateUpdated(msg.sender);
     }
 
     function updatePubAddressForTag(bytes32 aliasName, bytes32 tagName,
@@ -227,7 +214,6 @@ contract TNS{
             }
         }
         storage_tag_data.tagList[tag_struct_idx].tnsTagData.setPubAddress(newPubAddress);
-        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     function updateGenAddressFlag(bytes32 aliasName, bytes32 tagName, bool genFlag) public aliasEmpty(aliasName) tagEmpty(tagName)
@@ -236,17 +222,8 @@ contract TNS{
         TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
         uint tag_struct_idx = storage_tag_data.tagIdxMap[tagName];
         storage_tag_data.tagList[tag_struct_idx].tnsTagData.setGenAddressFlag(genFlag);
-        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
-    function updateGenAddressListReplace(bytes32 aliasName, bytes32 tagName,
-        address[] addressList) public aliasEmpty(aliasName) tagEmpty(tagName) aliasTagExist(aliasName, tagName) isOwner(aliasName){
-
-        TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
-        uint tag_struct_idx = storage_tag_data.tagIdxMap[tagName];
-        storage_tag_data.tagList[tag_struct_idx].tnsTagData.setGenAddressList(addressList);
-        emit StateAliasUpdated(msg.sender, aliasName);
-    }
 
     function updateGenAddressListAppend(bytes32 aliasName, bytes32 tagName,
         address newAddress) public aliasEmpty(aliasName) tagEmpty(tagName) aliasTagExist(aliasName, tagName) isOwner(aliasName){
@@ -257,7 +234,6 @@ contract TNS{
         uint num_elems =  storage_tag_data.tagList[tag_struct_idx].tnsTagData.getGenAddressListLen();
         require(num_elems < 20, "You can only store up to 20 addresses in order to obey gas limit.");
         storage_tag_data.tagList[tag_struct_idx].tnsTagData.appendGenAddressList(newAddress);
-        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     function updateGenAddressListDelete(bytes32 aliasName, bytes32 tagName, uint idxToRemove) public
@@ -267,7 +243,6 @@ contract TNS{
         uint tag_struct_idx = storage_tag_data.tagIdxMap[tagName];
 
         storage_tag_data.tagList[tag_struct_idx].tnsTagData.deleteFromGenAddressList(idxToRemove);
-        emit StateAliasUpdated(msg.sender, aliasName);
     }
 
     function updateTagIsSecret(bytes32 aliasName, bytes32 tagName, bool isSecret)  aliasEmpty(aliasName) tagEmpty(tagName)
@@ -308,11 +283,11 @@ contract TNS{
 
     //GETTERS
 
-    function getGenAddressList(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
+    function getGenAddressList(bytes32 aliasName, bytes32 tagName)
         public view returns(address[]){
 
         if (doesAliasTagExist(aliasName,tagName)){
-             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
+            TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
             return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.getGenAddressList();
         }else{
             address[] memory empty_array = new address[](0);
@@ -320,7 +295,7 @@ contract TNS{
         }
     }
 
-    function getGenAddressListLen(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
+    function getGenAddressListLen(bytes32 aliasName, bytes32 tagName)
         public view returns(uint){
         if (doesAliasTagExist(aliasName,tagName)){
             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
@@ -330,7 +305,7 @@ contract TNS{
         }
     }
 
-    function getPubAddressForTag(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
+    function getPubAddressForTag(bytes32 aliasName, bytes32 tagName)
         public view returns(address){
         if (doesAliasTagExist(aliasName,tagName)){
             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
@@ -340,7 +315,7 @@ contract TNS{
         }
     }
 
-    function getGenAddressForTag(bytes32 aliasName, bytes32 tagName, uint idx) //aliasTagExist(aliasName,tagName)
+    function getGenAddressForTag(bytes32 aliasName, bytes32 tagName, uint idx)
         public view returns(address){
         if (doesAliasTagExist(aliasName,tagName)){
             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
@@ -350,7 +325,7 @@ contract TNS{
         }
     }
 
-    function getGenAddressFlag(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
+    function getGenAddressFlag(bytes32 aliasName, bytes32 tagName)
         public view returns(bool){
         if (doesAliasTagExist(aliasName,tagName)){
             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
@@ -374,7 +349,7 @@ contract TNS{
         }
         return true;
     }
-    function getAllTagsForAlias(bytes32 aliasName) /*aliasExist(aliasName)*/ public view returns(bytes32[]){
+    function getAllTagsForAlias(bytes32 aliasName) public view returns(bytes32[]){
         if (doesAliasExist(aliasName)){
             return aliasList[aliasIdxMap[aliasName]].tagData.keccakTagsList;
         }else{
@@ -385,14 +360,14 @@ contract TNS{
     function getAliasesForOwner(address ownerAddress) public view returns(bytes32[]){
         return tnsOwnerReverse.getAllAliasesForOwner(ownerAddress);
     }
-    function getEncryptedAliasForKeccak(bytes32 aliasName) /*aliasExist(aliasName)*/ public view returns(bytes32){
+    function getEncryptedAliasForKeccak(bytes32 aliasName) public view returns(bytes32){
         if (doesAliasExist(aliasName)){
             return aliasList[aliasIdxMap[aliasName]].encryptedAlias;
         }else{
             return 0x0;
         }
     }
-    function getEncryptedTagForKeccak(bytes32 aliasName, bytes32 tagName) /*aliasTagExist(aliasName, tagName)*/
+    function getEncryptedTagForKeccak(bytes32 aliasName, bytes32 tagName) 
         public view returns(bytes32){
         if (doesAliasTagExist(aliasName,tagName)){
             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
@@ -402,7 +377,7 @@ contract TNS{
         }
     }
 
-    function getAliasOwner(bytes32 aliasName) /*aliasExist(aliasName)*/ public view returns(address){
+    function getAliasOwner(bytes32 aliasName) public view returns(address){
         if (doesAliasExist(aliasName)){
             return aliasList[aliasIdxMap[aliasName]].aliasOwner;
         }else{
@@ -421,7 +396,7 @@ contract TNS{
         return (gen_flag, is_tag_secret, gen_list, enc_secret_users, pub_address);
     }
 
-    function isSecretUser(bytes32 aliasName, bytes32 tagName, bytes32 keccakUser) /*aliasTagExist(aliasName,tagName)*/ public view returns(bool){
+    function isSecretUser(bytes32 aliasName, bytes32 tagName, bytes32 keccakUser) public view returns(bool){
         if (doesAliasTagExist(aliasName,tagName)){
             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
             return storage_tag_data.tagList[storage_tag_data.tagIdxMap[tagName]].tnsTagData.secretUserExists(keccakUser);
@@ -430,7 +405,7 @@ contract TNS{
         }
     }
 
-    function getSecretUserList(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
+    function getSecretUserList(bytes32 aliasName, bytes32 tagName) 
         public view returns(bytes32[]){ 
         if (doesAliasTagExist(aliasName,tagName)){
             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
@@ -441,7 +416,7 @@ contract TNS{
         }
     }
 
-    function getIsTagSecret(bytes32 aliasName, bytes32 tagName) //aliasTagExist(aliasName,tagName)
+    function getIsTagSecret(bytes32 aliasName, bytes32 tagName)
         public view returns(bool){
         if (doesAliasTagExist(aliasName,tagName)){
             TagData storage storage_tag_data = aliasList[aliasIdxMap[aliasName]].tagData;
