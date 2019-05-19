@@ -1,7 +1,7 @@
 pragma solidity ^0.4.23;
 
 contract TNSOwnerReverse{
-    mapping (address=>bytes32[]) ownerAliasList;
+    mapping (address=>bytes32[]) ownerAliasList; //include a map of keccak alias to list idx
 
     function addOwnerAddress(address aliasOwner, bytes32 alias) public{
         ownerAliasList[aliasOwner].push(alias);

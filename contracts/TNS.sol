@@ -1,30 +1,29 @@
 pragma solidity ^0.4.23;
 
-import {TNSTag} from "./TNSTag.sol";
 import {TNSOwnerReverse} from "./TNSOwnerReverse.sol";
 
 contract TNS{
-    using TNSTag for TNSTag.TNSTagData;
+    using TagDataLib for TagDataLib.TagData;
     struct TagWrapStruct{
-        TNSTag.TNSTagData tnsTagData;
+        TagDataLib.TagData tnsTagData;
         bytes32 encryptedTag;
     }
     /* We make sure the index tagIdxMap resolves to is the same for both
     tagList and keccakTagsList */
-    struct TagData{
+    struct BaseTagMetaData{
         mapping (bytes32 => uint) tagIdxMap;
         TagWrapStruct[] tagList;
         bytes32[] keccakTagsList;
-        mapping (bytes32 => bool) tagExistMap;
+        mapping (bytes32 => bool) tagExistMap; //get rid of it
     }
     struct AliasWrapStruct{
-        TagData tagData;
+        BaseTagMetaData tagData;
         bytes32 encryptedAlias;
-        uint aliasIdx;
+        uint aliasIdx; //get rid of it
         address aliasOwner;
     }
     mapping (bytes32 => uint) aliasIdxMap;
-    mapping (bytes32 => bool) aliasExistMap;
+    mapping (bytes32 => bool) aliasExistMap; //get rid of it
     AliasWrapStruct[] aliasList;
 
     TNSOwnerReverse tnsOwnerReverse;
