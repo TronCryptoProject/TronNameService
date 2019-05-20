@@ -1,3 +1,3 @@
-# TronNameService
+# Tron Name Service Smart Contract
 
-Human Readable Addresses
+#### Smart contracts for creating/fetching/updating alias/tags/permissions for Tron base58 addresses
